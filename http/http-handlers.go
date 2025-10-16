@@ -13,7 +13,7 @@ type database map[string]int
 
 func main() {
 	mux := http.NewServeMux()
-	var db database = make(map[string]int)
+	db := database{}
 
 	mux.HandleFunc("/list", db.list) // mux диспетчеризирует запросы
 	mux.HandleFunc("/find", db.find)
