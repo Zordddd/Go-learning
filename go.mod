@@ -1,3 +1,3 @@
-module github.com/Zordddd/learning
+module github.com/Zordddd/Go-learning
 
 go 1.25.1
