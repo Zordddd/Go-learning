@@ -9,6 +9,14 @@ import (
 	"strings"
 )
 
+var (
+	viewCommand   = "view"
+	searchCommand = "search"
+	selectCommand = "select"
+	filterCommand = "filter"
+	countCommand  = "count"
+)
+
 func main() {
 	var command string
 	if len(os.Args) > 1 {
@@ -16,15 +24,15 @@ func main() {
 	}
 
 	switch command {
-	case "view":
+	case viewCommand:
 		view()
-	case "search":
+	case searchCommand:
 		search()
-	case "select":
+	case selectCommand:
 		sel()
-	case "filter":
+	case filterCommand:
 		filter()
-	case "count":
+	case countCommand:
 		count()
 	default:
 		fmt.Println("Unknown command")
@@ -32,7 +40,7 @@ func main() {
 }
 
 func view() {
-	cmdFlags := flag.NewFlagSet("view", flag.ExitOnError)
+	cmdFlags := flag.NewFlagSet(viewCommand, flag.ExitOnError)
 	filename := cmdFlags.String("f", "", "Input CSV file")
 
 	input, err := parseFile(cmdFlags, filename)
@@ -55,7 +63,7 @@ func view() {
 }
 
 func search() {
-	cmdFlags := flag.NewFlagSet("search", flag.ExitOnError)
+	cmdFlags := flag.NewFlagSet(searchCommand, flag.ExitOnError)
 	filename := cmdFlags.String("f", "", "Input CSV file")
 	query := cmdFlags.String("query", "", "Input a query to search")
 
@@ -75,7 +83,7 @@ func search() {
 }
 
 func sel() {
-	cmdFlags := flag.NewFlagSet("select", flag.ExitOnError)
+	cmdFlags := flag.NewFlagSet(selectCommand, flag.ExitOnError)
 	filename := cmdFlags.String("f", "", "Input CSV file")
 	colsNames := cmdFlags.String("cols", "", "Input names of cols with \",\"")
 
@@ -102,7 +110,7 @@ func sel() {
 }
 
 func filter() {
-	cmdFlags := flag.NewFlagSet("filter", flag.ExitOnError)
+	cmdFlags := flag.NewFlagSet(filterCommand, flag.ExitOnError)
 	filename := cmdFlags.String("f", "", "Input CSV file")
 	colName := cmdFlags.String("col", "", "Input names of cols with \",\"")
 	valueInCol := cmdFlags.String("val", "", "Input value of col")
@@ -128,7 +136,7 @@ func filter() {
 }
 
 func count() {
-	cmdFlags := flag.NewFlagSet("count", flag.ExitOnError)
+	cmdFlags := flag.NewFlagSet(countCommand, flag.ExitOnError)
 	filename := cmdFlags.String("f", "", "Input CSV file")
 	input, err := parseFile(cmdFlags, filename)
 	if err != nil {
