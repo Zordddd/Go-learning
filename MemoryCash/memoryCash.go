@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"hash/fnv"
 	"io"
@@ -24,49 +25,53 @@ func httpGetBody(url string) (interface{}, error) {
 	return io.ReadAll(resp.Body)
 }
 
-type Func func(string) (interface{}, error)
-type result struct {
-	value interface{}
+type Func[K comparable, T any] func(K) (T, error)
+type result[V any] struct {
+	value V
 	err   error
 }
 
-type entry struct {
+type entry[V any] struct {
 	ready chan struct{}
-	res   result
+	res   result[V]
 }
-type Shard struct {
-	f     Func
+type Shard[K comparable, V any] struct {
+	f     Func[K, V]
 	mu    sync.Mutex
-	cache map[string]*entry
+	cache map[K]*entry[V]
 }
-type Memo struct {
-	shards    []*Shard
+type Memo[K comparable, V any] struct {
+	shards    []*Shard[K, V]
 	numShards int
 }
 
-func NewMemo(f Func, numShards int) *Memo {
-	m := &Memo{shards: make([]*Shard, 0, numShards), numShards: numShards}
+func NewMemo[K comparable, V any](f Func[K, V], numShards int) *Memo[K, V] {
+	m := &Memo[K, V]{shards: make([]*Shard[K, V], 0, numShards), numShards: numShards}
 	for i := 0; i < numShards; i++ {
-		m.shards = append(m.shards, newShard(f))
+		m.shards = append(m.shards, newShard[K, V](f))
 	}
 	return m
 }
 
-func (m *Memo) Get(url string) (interface{}, error) {
-	shardID := hasher(url) % m.numShards
+func (m *Memo[K, V]) Get(url K) (interface{}, error) {
+	hashURL, err := hasher(url)
+	if err != nil {
+		return nil, err
+	}
+	shardID := hashURL % m.numShards
 	res, err := m.shards[shardID].Get(url)
 	return res, err
 }
 
-func newShard(f Func) *Shard {
-	return &Shard{f: f, cache: make(map[string]*entry)}
+func newShard[K comparable, V any](f Func[K, V]) *Shard[K, V] {
+	return &Shard[K, V]{f: f, cache: make(map[K]*entry[V])}
 }
 
-func (s *Shard) Get(url string) (interface{}, error) {
+func (s *Shard[K, V]) Get(url K) (V, error) {
 	s.mu.Lock()
 	e := s.cache[url]
 	if e == nil {
-		e = &entry{ready: make(chan struct{})}
+		e = &entry[V]{ready: make(chan struct{})}
 		s.cache[url] = e
 		s.mu.Unlock()
 
@@ -80,10 +85,14 @@ func (s *Shard) Get(url string) (interface{}, error) {
 	return e.res.value, e.res.err
 }
 
-func hasher(url string) int {
+func hasher[K comparable](url K) (int, error) {
 	h := fnv.New32a()
-	_, _ = h.Write([]byte(url))
-	return int(h.Sum32())
+	urlBytes, err := json.Marshal(url)
+	if err != nil {
+		return 0, err
+	}
+	_, _ = h.Write(urlBytes)
+	return int(h.Sum32()), nil
 }
 
 func main() {
@@ -203,7 +212,7 @@ func main() {
 	}
 	wg := sync.WaitGroup{}
 
-	cacheGetBody := NewMemo(httpGetBody, 10)
+	cacheGetBody := NewMemo[string, interface{}](httpGetBody, 10)
 	for _, site := range sites {
 		wg.Add(1)
 		go func(site string) {
@@ -213,7 +222,7 @@ func main() {
 			if err != nil {
 				fmt.Println(err)
 			}
-			fmt.Printf("%s Get took %v\n", site, time.Since(start).Milliseconds())
+			fmt.Printf("%s Get took %v\n", site, time.Now().Sub(start).Milliseconds())
 		}(site)
 	}
 	wg.Wait()
