@@ -1,58 +1,53 @@
-package main
+package MemoryCash
 
 import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"hash/fnv"
-	"io"
-	"log"
-	"net/http"
 	"sync"
-	"time"
 )
 
-func httpGetBody(ctx context.Context, url string) ([]byte, error) {
-	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
-	if err != nil {
-		return nil, err
-	}
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		err := resp.Body.Close()
-		if err != nil {
-			log.Println(err)
-		}
-	}()
-	return readAllWithContext(ctx, resp.Body)
-}
+//func httpGetBody(ctx context.Context, url string) ([]byte, error) {
+//	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+//	if err != nil {
+//		return nil, err
+//	}
+//	resp, err := http.DefaultClient.Do(req)
+//	if err != nil {
+//		return nil, err
+//	}
+//	defer func() {
+//		err := resp.Body.Close()
+//		if err != nil {
+//			log.Println(err)
+//		}
+//	}()
+//	return readAllWithContext(ctx, resp.Body)
+//}
 
-func readAllWithContext(ctx context.Context, r io.Reader) ([]byte, error) {
-	var result []byte
-	buf := make([]byte, 32*1024)
-
-	for {
-		select {
-		case <-ctx.Done():
-			return nil, ctx.Err()
-		default:
-			n, err := r.Read(buf)
-			if n > 0 {
-				result = append(result, buf[:n]...)
-			}
-			if err == io.EOF {
-				return result, nil
-			}
-			if err != nil {
-				return nil, err
-			}
-		}
-	}
-}
+//func readAllWithContext(ctx context.Context, r io.Reader) ([]byte, error) {
+//	var result []byte
+//	buf := make([]byte, 32*1024)
+//
+//	for {
+//		select {
+//		case <-ctx.Done():
+//			return nil, ctx.Err()
+//		default:
+//			n, err := r.Read(buf)
+//			if n > 0 {
+//				result = append(result, buf[:n]...)
+//			}
+//			if err == io.EOF {
+//				return result, nil
+//			}
+//			if err != nil {
+//				return nil, err
+//			}
+//		}
+//	}
+//}
 
 func zero[T any]() (res T) {
 	return res
@@ -139,91 +134,92 @@ func hasher[K comparable](url K) (int, error) {
 	return int(h.Sum32()), nil
 }
 
-func main() {
-	sites := []string{
-		"https://www.google.com",
-		"https://www.youtube.com",
-		"https://www.facebook.com",
-		"https://www.twitter.com",
-		"https://www.instagram.com",
-		"https://www.linkedin.com",
-		"https://www.github.com",
-		"https://www.stackoverflow.com",
-		"https://www.reddit.com",
-		"https://www.wikipedia.org",
-		"https://www.amazon.com",
-		"https://www.netflix.com",
-		"https://www.instagram.com",
-		"https://www.apple.com",
-		"https://www.adobe.com",
-		"https://www.cloudflare.com",
-		"https://www.digitalocean.com",
-		"https://www.heroku.com",
-		"https://www.gitlab.com",
-		"https://www.wikipedia.org",
-		"https://www.docker.com",
-		"https://www.kubernetes.io",
-		"https://www.python.org",
-	}
-	wg := sync.WaitGroup{}
-
-	cacheGetBody := NewMemo[string, []byte](httpGetBody, 10)
-	for _, site := range sites {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-		wg.Add(1)
-		go func(ctx context.Context, site string) {
-			defer func() {
-				wg.Done()
-				cancel()
-			}()
-			start := time.Now()
-			_, err := cacheGetBody.Get(ctx, site)
-			if err != nil {
-				fmt.Println(err)
-			}
-			fmt.Printf("%s Get took %v\n", site, time.Now().Sub(start).Milliseconds())
-		}(ctx, site)
-	}
-
-	wg.Wait()
-
-	// Медленная функция для теста таймаутов
-	//slowFunc := func(ctx context.Context, key string) (string, error) {
-	//	select {
-	//	case <-time.After(2 * time.Second): // Всегда занимает 2 секунды
-	//		return "result", nil
-	//	case <-ctx.Done():
-	//		return "", ctx.Err()
-	//	}
-	//}
-	//
-	//cache := NewMemo(slowFunc, 4)
-	//
-	//// Тест с коротким таймаутом (должен сработать)
-	//ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
-	//defer cancel()
-	//
-	//start := time.Now()
-	//result, err := cache.Get(ctx, "test")
-	//elapsed := time.Since(start)
-	//
-	//if err != nil {
-	//	fmt.Printf("✅ Таймаут сработал за %v: %v\n", elapsed, err)
-	//} else {
-	//	fmt.Printf("❌ Таймаут не сработал: %v\n", result)
-	//}
-	//
-	//// Тест с длинным таймаутом (должен успешно завершиться)
-	//ctx2, cancel2 := context.WithTimeout(context.Background(), 3*time.Second)
-	//defer cancel2()
-	//
-	//start = time.Now()
-	//result, err = cache.Get(ctx2, "test")
-	//elapsed = time.Since(start)
-	//
-	//if err != nil {
-	//	fmt.Printf("❌ Неожиданная ошибка: %v\n", err)
-	//} else {
-	//	fmt.Printf("✅ Успешное завершение за %v: %v\n", elapsed, result)
-	//}
-}
+//
+//func main() {
+//	sites := []string{
+//		"https://www.google.com",
+//		"https://www.youtube.com",
+//		"https://www.facebook.com",
+//		"https://www.twitter.com",
+//		"https://www.instagram.com",
+//		"https://www.linkedin.com",
+//		"https://www.github.com",
+//		"https://www.stackoverflow.com",
+//		"https://www.reddit.com",
+//		"https://www.wikipedia.org",
+//		"https://www.amazon.com",
+//		"https://www.netflix.com",
+//		"https://www.instagram.com",
+//		"https://www.apple.com",
+//		"https://www.adobe.com",
+//		"https://www.cloudflare.com",
+//		"https://www.digitalocean.com",
+//		"https://www.heroku.com",
+//		"https://www.gitlab.com",
+//		"https://www.wikipedia.org",
+//		"https://www.docker.com",
+//		"https://www.kubernetes.io",
+//		"https://www.python.org",
+//	}
+//	wg := sync.WaitGroup{}
+//
+//	cacheGetBody := NewMemo[string, []byte](httpGetBody, 10)
+//	for _, site := range sites {
+//		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+//		wg.Add(1)
+//		go func(ctx context.Context, site string) {
+//			defer func() {
+//				wg.Done()
+//				cancel()
+//			}()
+//			start := time.Now()
+//			_, err := cacheGetBody.Get(ctx, site)
+//			if err != nil {
+//				fmt.Println(err)
+//			}
+//			fmt.Printf("%s Get took %v\n", site, time.Now().Sub(start).Milliseconds())
+//		}(ctx, site)
+//	}
+//
+//	wg.Wait()
+//
+//	// Медленная функция для теста таймаутов
+//	//slowFunc := func(ctx context.Context, key string) (string, error) {
+//	//	select {
+//	//	case <-time.After(2 * time.Second): // Всегда занимает 2 секунды
+//	//		return "result", nil
+//	//	case <-ctx.Done():
+//	//		return "", ctx.Err()
+//	//	}
+//	//}
+//	//
+//	//cache := NewMemo(slowFunc, 4)
+//	//
+//	//// Тест с коротким таймаутом (должен сработать)
+//	//ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+//	//defer cancel()
+//	//
+//	//start := time.Now()
+//	//result, err := cache.Get(ctx, "test")
+//	//elapsed := time.Since(start)
+//	//
+//	//if err != nil {
+//	//	fmt.Printf("✅ Таймаут сработал за %v: %v\n", elapsed, err)
+//	//} else {
+//	//	fmt.Printf("❌ Таймаут не сработал: %v\n", result)
+//	//}
+//	//
+//	//// Тест с длинным таймаутом (должен успешно завершиться)
+//	//ctx2, cancel2 := context.WithTimeout(context.Background(), 3*time.Second)
+//	//defer cancel2()
+//	//
+//	//start = time.Now()
+//	//result, err = cache.Get(ctx2, "test")
+//	//elapsed = time.Since(start)
+//	//
+//	//if err != nil {
+//	//	fmt.Printf("❌ Неожиданная ошибка: %v\n", err)
+//	//} else {
+//	//	fmt.Printf("✅ Успешное завершение за %v: %v\n", elapsed, result)
+//	//}
+//}
