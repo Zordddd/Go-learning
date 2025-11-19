@@ -30,10 +30,15 @@ jobs:
           go test -v -race -coverprofile=coverage.out ./...
           go tool cover -func=coverage.out
 
-      - name: linting
+      - name: Install golangci-lint
         run: |
-          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.54.2
-          cd MemoryCash && golangci-lint run ./...
+            curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b ./bin v1.54.2
+
+      - name: Linting
+        working-directory: ./MemoryCash
+        run: |
+          # Используем локально установленный golangci-lint
+          ../bin/golangci-lint run ./...
 
       - name: Run go vet
         run: cd MemoryCash && go vet ./...
