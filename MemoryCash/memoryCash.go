@@ -8,47 +8,6 @@ import (
 	"sync"
 )
 
-//func httpGetBody(ctx context.Context, url string) ([]byte, error) {
-//	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
-//	if err != nil {
-//		return nil, err
-//	}
-//	resp, err := http.DefaultClient.Do(req)
-//	if err != nil {
-//		return nil, err
-//	}
-//	defer func() {
-//		err := resp.Body.Close()
-//		if err != nil {
-//			log.Println(err)
-//		}
-//	}()
-//	return readAllWithContext(ctx, resp.Body)
-//}
-
-//func readAllWithContext(ctx context.Context, r io.Reader) ([]byte, error) {
-//	var result []byte
-//	buf := make([]byte, 32*1024)
-//
-//	for {
-//		select {
-//		case <-ctx.Done():
-//			return nil, ctx.Err()
-//		default:
-//			n, err := r.Read(buf)
-//			if n > 0 {
-//				result = append(result, buf[:n]...)
-//			}
-//			if err == io.EOF {
-//				return result, nil
-//			}
-//			if err != nil {
-//				return nil, err
-//			}
-//		}
-//	}
-//}
-
 func zero[T any]() (res T) {
 	return res
 }
@@ -222,4 +181,45 @@ func hasher[K comparable](url K) (int, error) {
 //	//} else {
 //	//	fmt.Printf("✅ Успешное завершение за %v: %v\n", elapsed, result)
 //	//}
+//}
+
+//func httpGetBody(ctx context.Context, url string) ([]byte, error) {
+//	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+//	if err != nil {
+//		return nil, err
+//	}
+//	resp, err := http.DefaultClient.Do(req)
+//	if err != nil {
+//		return nil, err
+//	}
+//	defer func() {
+//		err := resp.Body.Close()
+//		if err != nil {
+//			log.Println(err)
+//		}
+//	}()
+//	return readAllWithContext(ctx, resp.Body)
+//}
+
+//func readAllWithContext(ctx context.Context, r io.Reader) ([]byte, error) {
+//	var result []byte
+//	buf := make([]byte, 32*1024)
+//
+//	for {
+//		select {
+//		case <-ctx.Done():
+//			return nil, ctx.Err()
+//		default:
+//			n, err := r.Read(buf)
+//			if n > 0 {
+//				result = append(result, buf[:n]...)
+//			}
+//			if err == io.EOF {
+//				return result, nil
+//			}
+//			if err != nil {
+//				return nil, err
+//			}
+//		}
+//	}
 //}

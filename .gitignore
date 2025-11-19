@@ -1,4 +1,5 @@
 .vscode
-main.exe
-/http/http-handlers.exe
 .idea/
+*.exe
+*.csv
+*.py
