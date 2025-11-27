@@ -1,2 +1,6 @@
 .vscode
-main.exe
+*.exe
+*.py
+.idea/
+csvutil/
+http/
