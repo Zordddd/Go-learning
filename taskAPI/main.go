@@ -126,7 +126,6 @@ func authMiddleware(next http.HandlerFunc) http.HandlerFunc {
 
 func jsonContentTypeMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Для POST/PUT/PATCH проверяем Content-Type
 		if r.Method == http.MethodPost || r.Method == http.MethodPut || r.Method == http.MethodPatch {
 			if r.Header.Get("Content-Type") != "application/json" {
 				http.Error(w, `{"error": "Content-Type must be application/json"}`, http.StatusUnsupportedMediaType)
