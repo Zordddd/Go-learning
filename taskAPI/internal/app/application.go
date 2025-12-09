@@ -42,7 +42,7 @@ func (app *Application) SetupRoutes() http.Handler {
 	)
 
 	mux.HandleFunc("/tasks", chain(handler.GetTasksHandler))
-	mux.HandleFunc("/tasks/create", chain(handler.GetTasksHandler))
+	mux.HandleFunc("/tasks/create", chain(handler.CreateTaskHandler))
 
 	return mux
 }

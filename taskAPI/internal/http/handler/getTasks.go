@@ -8,8 +8,8 @@ import (
 )
 
 func GetTasksHandler(w http.ResponseWriter, r *http.Request) {
-	result := make([]storage.Task, 0, len(storage.Storage.Tasks))
-	for _, task := range storage.Storage.Tasks {
+	result := make([]storage.Task, 0, len(storage.Database.Tasks))
+	for _, task := range storage.Database.Tasks {
 		result = append(result, task)
 	}
 	w.Header().Set("Content-Type", "application/json")

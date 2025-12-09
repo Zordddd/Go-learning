@@ -9,7 +9,11 @@ type Task struct {
 	Timestamp time.Time `json:"timestamp"`
 }
 
-var Storage struct {
+type Storage struct {
 	Tasks  map[int]Task
 	NextID int
+}
+
+var Database = Storage{
+	Tasks: make(map[int]Task),
 }
