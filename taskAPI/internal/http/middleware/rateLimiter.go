@@ -6,8 +6,6 @@ import (
 	"net/http"
 	"sync"
 	"time"
-
-	"github.com/Zordddd/learning/taskAPI/pkg/http/responseWriter"
 )
 
 type RateLimiter struct {
@@ -49,15 +47,14 @@ func (rl *RateLimiter) Check(ip string) error {
 func NewRateLimiterMiddleware(rateLimiter *RateLimiter) func(next http.HandlerFunc) http.HandlerFunc {
 	return func(next http.HandlerFunc) http.HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {
-			rw := responseWriter.NewResponseWriter(w)
 			ip := r.RemoteAddr
 			err := rateLimiter.Check(ip)
 			if err != nil {
 				slog.Warn("IP rate limit exceeded", "ip", ip, "error", err)
-				rw.Header().Set("Content-Type", "application/json")
-				rw.WriteHeader(http.StatusTooManyRequests)
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusTooManyRequests)
 				if err := json.NewEncoder(w).Encode(map[string]string{"error": "Rate limit exceeded. Try again later."}); err != nil {
-					http.Error(rw, err.Error(), http.StatusInternalServerError)
+					http.Error(w, err.Error(), http.StatusInternalServerError)
 				}
 				return
 			}
@@ -66,7 +63,7 @@ func NewRateLimiterMiddleware(rateLimiter *RateLimiter) func(next http.HandlerFu
 				"current_count", rateLimiter.rates[ip],
 				"ip", ip,
 			)
-			next(rw, r)
+			next(w, r)
 		}
 	}
 }

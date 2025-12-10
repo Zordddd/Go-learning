@@ -3,27 +3,23 @@ package middleware
 import (
 	"log/slog"
 	"net/http"
-
-	"github.com/Zordddd/learning/taskAPI/pkg/http/responseWriter"
 )
 
 func RecoveryMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		rw := responseWriter.NewResponseWriter(w)
-
 		defer func() {
 			if err := recover(); err != nil {
 				slog.Error("panic", "error", err, "Addr", r.RemoteAddr)
-				if !rw.Written() {
-					rw.Header().Set("Content-Type", "application/json")
-					rw.WriteHeader(http.StatusInternalServerError)
-					if bytes, err := rw.Write([]byte(`{"error":"Internal Server Error"}`)); err != nil {
+				if rw, ok := w.(interface{ Written() bool }); ok && !rw.Written() {
+					w.Header().Set("Content-Type", "application/json")
+					w.WriteHeader(http.StatusInternalServerError)
+					if bytes, err := w.Write([]byte(`{"error":"Internal Server Error"}`)); err != nil {
 						slog.Error("Write response error", "error", err, "bytes", bytes)
 					}
 				}
 			}
 		}()
 
-		next(rw, r)
+		next(w, r)
 	}
 }

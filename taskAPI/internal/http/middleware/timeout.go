@@ -6,8 +6,6 @@ import (
 	"log/slog"
 	"net/http"
 	"time"
-
-	"github.com/Zordddd/learning/taskAPI/pkg/http/responseWriter"
 )
 
 func NewTimeoutMiddleware(timeout time.Duration) func(http.HandlerFunc) http.HandlerFunc {
@@ -16,17 +14,18 @@ func NewTimeoutMiddleware(timeout time.Duration) func(http.HandlerFunc) http.Han
 			ctx, cancel := context.WithTimeout(r.Context(), timeout)
 			defer cancel()
 			successHandle := make(chan struct{}, 1)
-			rw := responseWriter.NewResponseWriter(w)
 			go func() {
-				next(rw, r.WithContext(ctx))
-				successHandle <- struct{}{}
+				defer func() {
+					successHandle <- struct{}{}
+				}()
+				next(w, r.WithContext(ctx))
 			}()
 
 			select {
 			case <-successHandle:
 				return
 			case <-ctx.Done():
-				if !rw.Written() {
+				if rw, ok := w.(interface{ Written() bool }); ok && !rw.Written() {
 					slog.Warn("timeout error",
 						"timeout", timeout,
 						"Addr", r.RemoteAddr,
@@ -37,8 +36,8 @@ func NewTimeoutMiddleware(timeout time.Duration) func(http.HandlerFunc) http.Han
 					response := map[string]interface{}{
 						"timeout error": timeout,
 					}
-					if err := json.NewEncoder(rw).Encode(response); err != nil {
-						http.Error(rw, err.Error(), http.StatusInternalServerError)
+					if err := json.NewEncoder(w).Encode(response); err != nil {
+						http.Error(w, err.Error(), http.StatusInternalServerError)
 					}
 				}
 			}

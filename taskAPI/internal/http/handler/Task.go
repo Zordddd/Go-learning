@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/Zordddd/learning/taskAPI/internal/storage"
-	"github.com/Zordddd/learning/taskAPI/pkg/http/responseWriter"
 )
 
 func TaskHandler(w http.ResponseWriter, r *http.Request) {
@@ -21,11 +20,13 @@ func TaskHandler(w http.ResponseWriter, r *http.Request) {
 		UpdateTaskHandler(w, r)
 	case http.MethodDelete:
 		DeleteTaskHandler(w, r)
+	default:
+		w.Header().Set("Allow", "GET, POST, PUT, DELETE")
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
 }
 
 func GetTasksHandler(w http.ResponseWriter, r *http.Request) {
-	rw := responseWriter.NewResponseWriter(w)
 	result := make([]storage.Task, 0, len(storage.Database.Tasks))
 	storage.Database.Mu.RLock()
 	for _, task := range storage.Database.Tasks {
@@ -33,18 +34,17 @@ func GetTasksHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	storage.Database.Mu.RUnlock()
 
-	rw.Header().Set("Content-Type", "application/json")
-	rw.WriteHeader(http.StatusOK)
-	if err := json.NewEncoder(rw).Encode(result); err != nil {
-		http.Error(rw, err.Error(), http.StatusInternalServerError)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(result); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
 
 func CreateTaskHandler(w http.ResponseWriter, r *http.Request) {
-	rw := responseWriter.NewResponseWriter(w)
 	var task storage.Task
 	if err := json.NewDecoder(r.Body).Decode(&task); err != nil {
-		http.Error(rw, err.Error(), http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	storage.Database.Mu.Lock()
@@ -54,60 +54,62 @@ func CreateTaskHandler(w http.ResponseWriter, r *http.Request) {
 	storage.Database.NextID++
 	storage.Database.Mu.Unlock()
 
-	rw.Header().Set("Content-Type", "application/json")
-	rw.WriteHeader(http.StatusCreated)
-	if err := json.NewEncoder(rw).Encode(task); err != nil {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	if err := json.NewEncoder(w).Encode(task); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
 
 func UpdateTaskHandler(w http.ResponseWriter, r *http.Request) {
-	rw := responseWriter.NewResponseWriter(w)
 	var currentTask storage.Task
 	if err := json.NewDecoder(r.Body).Decode(&currentTask); err != nil {
-		http.Error(rw, err.Error(), http.StatusBadRequest)
-		rw.WriteHeader(http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if _, exists := storage.Database.Tasks[currentTask.ID]; !exists {
+		http.Error(w, "Task not found", http.StatusNotFound)
 		return
 	}
 	storage.Database.Mu.Lock()
 	storage.Database.Tasks[currentTask.ID] = &currentTask
 	storage.Database.Mu.Unlock()
 
-	rw.Header().Set("Content-Type", "application/json")
-	rw.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 	response := map[string]interface{}{
 		"status": "success",
 	}
-	if err := json.NewEncoder(rw).Encode(response); err != nil {
-		http.Error(rw, err.Error(), http.StatusInternalServerError)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
 
 func DeleteTaskHandler(w http.ResponseWriter, r *http.Request) {
-	rw := responseWriter.NewResponseWriter(w)
 	data := r.URL.Query().Get("id")
 	if data == "" {
-		http.Error(rw, "id is required", http.StatusBadRequest)
-		rw.WriteHeader(http.StatusBadRequest)
+		http.Error(w, "id is required", http.StatusBadRequest)
 		return
 	}
 	id, err := strconv.Atoi(data)
 	if err != nil {
-		http.Error(rw, err.Error(), http.StatusBadRequest)
-		rw.WriteHeader(http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-
+	if _, exists := storage.Database.Tasks[id]; !exists {
+		http.Error(w, "Task not found", http.StatusNotFound)
+		return
+	}
 	storage.Database.Mu.Lock()
 	delete(storage.Database.Tasks, id)
 	storage.Database.Mu.Unlock()
 
-	rw.Header().Set("Content-Type", "application/json")
-	rw.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 	response := map[string]interface{}{
 		"status": "success",
 	}
-	if err := json.NewEncoder(rw).Encode(response); err != nil {
-		http.Error(rw, err.Error(), http.StatusInternalServerError)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }

@@ -54,14 +54,15 @@ func (app *Application) SetupRoutes() http.Handler {
 	CORSMiddleware := middleware.NewCORSMiddleware(app.config)
 
 	chain := middleware.Chain(
-		CORSMiddleware,
-		middleware.RequestIDMiddleware,
+		middleware.ResponseWriterMiddleware,
 		middleware.LoggingMiddleware,
+		middleware.RequestIDMiddleware,
 		middleware.RecoveryMiddleware,
+		CORSMiddleware,
 		timeoutMiddleware,
+		rateLimiterMiddleware,
 		middleware.AuthMiddleware,
 		middleware.JsonContentTypeMiddleware,
-		rateLimiterMiddleware,
 	)
 
 	mux.HandleFunc("/health", app.healthHandler)
