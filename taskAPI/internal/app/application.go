@@ -19,6 +19,7 @@ import (
 type Application struct {
 	server *http.Server
 	logger *slog.Logger
+	config middleware.CORSOptions
 }
 
 func NewApplication() *Application {
@@ -31,6 +32,13 @@ func NewApplication() *Application {
 			IdleTimeout:  time.Second * 60,
 		},
 		logger: newLogger,
+		config: middleware.CORSOptions{
+			Origins:     []string{"*"},
+			Methods:     []string{"GET", "POST", "OPTIONS"},
+			Headers:     []string{"Access-Control-Allow-Origin", "Access-Control-Allow-Headers", "Content-Type", "X-API-Key", "Authorization"},
+			Credentials: true,
+			MaxAge:      300,
+		},
 	}
 }
 
@@ -39,14 +47,20 @@ func (app *Application) SetupRoutes() http.Handler {
 
 	rateLimiter := middleware.NewRateLimiter(time.Minute, 5)
 	rateLimiterMiddleware := middleware.NewRateLimiterMiddleware(rateLimiter)
+	timeoutMiddleware := middleware.NewTimeoutMiddleware(time.Second * 30)
+	CORSMiddlerware := middleware.NewCORSMiddleware(app.config)
+
 	chain := middleware.Chain(
+		CORSMiddlerware,
+		middleware.RequestIDMiddleware,
 		middleware.LoggingMiddleware,
 		middleware.RecoveryMiddleware,
+		timeoutMiddleware,
 		middleware.AuthMiddleware,
 		middleware.JsonContentTypeMiddleware,
-		middleware.RequestIDMiddleware,
 		rateLimiterMiddleware,
 	)
+
 	mux.HandleFunc("/health", app.healthHandler)
 	mux.HandleFunc("/liveness", app.livenessHandler)
 	mux.HandleFunc("/readiness", app.readinessHandler)
