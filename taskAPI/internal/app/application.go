@@ -24,7 +24,7 @@ type Application struct {
 
 func NewApplication() *Application {
 	newLogger := logger.SetupLogger()
-	return &Application{
+	app := &Application{
 		server: &http.Server{
 			Addr:         ":8080",
 			WriteTimeout: time.Second * 15,
@@ -35,11 +35,14 @@ func NewApplication() *Application {
 		config: middleware.CORSOptions{
 			Origins:     []string{"*"},
 			Methods:     []string{"GET", "POST", "OPTIONS"},
-			Headers:     []string{"Access-Control-Allow-Origin", "Access-Control-Allow-Headers", "Content-Type", "X-API-Key", "Authorization"},
+			Headers:     []string{"Content-Type", "X-API-Key", "Authorization"},
 			Credentials: true,
 			MaxAge:      300,
 		},
 	}
+	app.server.Handler = app.SetupRoutes()
+
+	return app
 }
 
 func (app *Application) SetupRoutes() http.Handler {
@@ -65,8 +68,7 @@ func (app *Application) SetupRoutes() http.Handler {
 	mux.HandleFunc("/liveness", app.livenessHandler)
 	mux.HandleFunc("/readiness", app.readinessHandler)
 
-	mux.HandleFunc("/tasks", chain(handler.GetTasksHandler))
-	mux.HandleFunc("/tasks/create", chain(handler.CreateTaskHandler))
+	mux.HandleFunc("/tasks", chain(handler.TaskHandler))
 
 	return mux
 }
