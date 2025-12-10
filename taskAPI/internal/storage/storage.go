@@ -14,10 +14,10 @@ type Task struct {
 
 type Storage struct {
 	Mu     sync.RWMutex
-	Tasks  map[int]Task
+	Tasks  map[int]*Task
 	NextID int
 }
 
 var Database = Storage{
-	Tasks: make(map[int]Task),
+	Tasks: make(map[int]*Task),
 }
