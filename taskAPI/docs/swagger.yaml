@@ -1,0 +1,224 @@
+basePath: /
+definitions:
+  storage.Task:
+    description: Task information
+    properties:
+      id:
+        type: integer
+      name:
+        type: string
+      status:
+        type: boolean
+      timestamp:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@taskapi.com
+    name: API Support
+  description: A simple task management API with authentication and middleware
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: http://swagger.io/terms/
+  title: Task Management API
+  version: "1.0"
+paths:
+  /health:
+    get:
+      description: Check if the service is alive
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: boolean
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Health check endpoint
+      tags:
+      - health
+  /liveness:
+    get:
+      description: Kubernetes liveness probe endpoint
+      responses:
+        "200":
+          description: OK
+      summary: Liveness probe
+      tags:
+      - health
+  /readiness:
+    get:
+      description: Kubernetes readiness probe endpoint
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Readiness probe
+      tags:
+      - health
+  /tasks:
+    delete:
+      consumes:
+      - application/json
+      description: Remove a task from the database by ID
+      parameters:
+      - description: Task ID
+        in: query
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Delete a task
+      tags:
+      - tasks
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all tasks from the database
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/storage.Task'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get all tasks
+      tags:
+      - tasks
+    post:
+      consumes:
+      - application/json
+      description: Add a new task to the database
+      parameters:
+      - description: Task object
+        in: body
+        name: task
+        required: true
+        schema:
+          $ref: '#/definitions/storage.Task'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/storage.Task'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Create a new task
+      tags:
+      - tasks
+    put:
+      consumes:
+      - application/json
+      description: Update task information
+      parameters:
+      - description: Updated task object
+        in: body
+        name: task
+        required: true
+        schema:
+          $ref: '#/definitions/storage.Task'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Update an existing task
+      tags:
+      - tasks
+securityDefinitions:
+  ApiKeyAuth:
+    in: header
+    name: X-API-Key
+    type: apiKey
+swagger: "2.0"

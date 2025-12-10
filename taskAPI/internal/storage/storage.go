@@ -5,6 +5,8 @@ import (
 	"time"
 )
 
+// Task represents a task entity
+// @Description Task information
 type Task struct {
 	ID        int       `json:"id"`
 	Name      string    `json:"name"`
@@ -12,6 +14,7 @@ type Task struct {
 	Timestamp time.Time `json:"timestamp"`
 }
 
+// Storage holds the in-memory database
 type Storage struct {
 	Mu     sync.RWMutex
 	Tasks  map[int]*Task

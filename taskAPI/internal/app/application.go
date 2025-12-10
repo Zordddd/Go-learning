@@ -14,6 +14,9 @@ import (
 	"github.com/Zordddd/learning/taskAPI/internal/http/middleware"
 	"github.com/Zordddd/learning/taskAPI/internal/storage"
 	"github.com/Zordddd/learning/taskAPI/pkg/logger"
+
+	_ "github.com/Zordddd/learning/taskAPI/docs"
+	httpSwagger "github.com/swaggo/http-swagger"
 )
 
 type Application struct {
@@ -64,12 +67,14 @@ func (app *Application) SetupRoutes() http.Handler {
 		middleware.AuthMiddleware,
 		middleware.JsonContentTypeMiddleware,
 	)
-
+	mux.HandleFunc("/swagger/", httpSwagger.Handler(
+		httpSwagger.URL("/swagger/doc.json"),
+	))
 	mux.HandleFunc("/health", app.healthHandler)
 	mux.HandleFunc("/liveness", app.livenessHandler)
 	mux.HandleFunc("/readiness", app.readinessHandler)
 
-	mux.HandleFunc("/tasks", chain(handler.TaskHandler))
+	mux.HandleFunc("/task", chain(handler.TaskHandler))
 
 	return mux
 }
@@ -101,10 +106,24 @@ func (app *Application) Run() error {
 	return nil
 }
 
+// livenessHandler godoc
+// @Summary Liveness probe
+// @Description Kubernetes liveness probe endpoint
+// @Tags health
+// @Success 200
+// @Router /liveness [get]
 func (app *Application) livenessHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+// healthHandler godoc
+// @Summary Health check endpoint
+// @Description Check if the service is alive
+// @Tags health
+// @Produce json
+// @Success 200 {object} map[string]bool
+// @Failure 500 {object} map[string]interface{}
+// @Router /health [get]
 func (app *Application) healthHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	if bytes, err := w.Write([]byte(`{"alive": true}`)); err != nil {
@@ -120,6 +139,14 @@ func (app *Application) healthHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// readinessHandler godoc
+// @Summary Readiness probe
+// @Description Kubernetes readiness probe endpoint
+// @Tags health
+// @Produce json
+// @Success 200 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @Router /readiness [get]
 func (app *Application) readinessHandler(w http.ResponseWriter, r *http.Request) {
 	if storage.Database.Tasks != nil {
 		w.Header().Set("Content-Type", "application/json")
