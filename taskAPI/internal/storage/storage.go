@@ -1,6 +1,9 @@
 package storage
 
-import "time"
+import (
+	"sync"
+	"time"
+)
 
 type Task struct {
 	ID        int       `json:"id"`
@@ -10,6 +13,7 @@ type Task struct {
 }
 
 type Storage struct {
+	Mu     sync.RWMutex
 	Tasks  map[int]Task
 	NextID int
 }

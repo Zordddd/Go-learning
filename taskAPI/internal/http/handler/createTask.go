@@ -14,10 +14,12 @@ func CreateTaskHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	storage.Database.Mu.Lock()
 	task.ID = storage.Database.NextID
 	task.Timestamp = time.Now()
 	storage.Database.Tasks[storage.Database.NextID] = task
 	storage.Database.NextID++
+	storage.Database.Mu.Unlock()
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)

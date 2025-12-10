@@ -9,9 +9,12 @@ import (
 
 func GetTasksHandler(w http.ResponseWriter, r *http.Request) {
 	result := make([]storage.Task, 0, len(storage.Database.Tasks))
+	storage.Database.Mu.RLock()
 	for _, task := range storage.Database.Tasks {
 		result = append(result, task)
 	}
+	storage.Database.Mu.RUnlock()
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(w).Encode(result); err != nil {
