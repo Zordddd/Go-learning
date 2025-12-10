@@ -48,10 +48,10 @@ func (app *Application) SetupRoutes() http.Handler {
 	rateLimiter := middleware.NewRateLimiter(time.Minute, 5)
 	rateLimiterMiddleware := middleware.NewRateLimiterMiddleware(rateLimiter)
 	timeoutMiddleware := middleware.NewTimeoutMiddleware(time.Second * 30)
-	CORSMiddlerware := middleware.NewCORSMiddleware(app.config)
+	CORSMiddleware := middleware.NewCORSMiddleware(app.config)
 
 	chain := middleware.Chain(
-		CORSMiddlerware,
+		CORSMiddleware,
 		middleware.RequestIDMiddleware,
 		middleware.LoggingMiddleware,
 		middleware.RecoveryMiddleware,
