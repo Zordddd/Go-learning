@@ -1,0 +1,30 @@
+version: '1'
+
+services:
+  db:
+    image: postgres
+    container_name: db
+    environment:
+      POSTGRES_DB: database
+      POSTGRES_USER: app_database
+      POSTGRES_PASSWORD: app_database
+    volumes:
+      - db_vol:/var/lib/postgresql/data/pgdata
+    networks:
+      - db_net
+
+  backend:
+    image: api:1.0
+    container_name: backend
+    networks:
+      - db_net
+    environment:
+      HOST: db
+    ports:
+      - 8080:8080
+
+volumes:
+  db_vol:
+
+networks:
+  db_net:

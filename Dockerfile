@@ -1,26 +1,69 @@
-FROM golang:1.25.1-alpine AS builder
+FROM golang:1.25 AS builder
 
 WORKDIR /app
-
 COPY go.mod go.sum ./
 
 RUN go mod download
+COPY . .
 
-COPY taskAPI/ ./taskAPI/
-
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /app/server ./taskAPI/cmd/api-server
+RUN go build -o api-server ./taskAPI/cmd/api-server/api-server.go
 
 FROM alpine:latest
 
-RUN apk --no-cache add ca-certificates
-RUN addgroup -g 1000 -S appuser && \
-    adduser -u 1000 -S appuser -G appuser
-USER appuser
-
-WORKDIR /home/appuser
-
-COPY --from=builder /app/server .
+WORKDIR /app
+COPY --from=builder /app/api-server .
 
 EXPOSE 8080
+CMD ["./api-server"]
 
-CMD ["./server"]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#FROM golang:1.25
+#
+#RUN apt-get update && apt-get install
+#
+#WORKDIR /app
+#
+#COPY go.mod go.sum ./
+#
+#RUN go mod download
+#
+#COPY . .
+#
+#RUN go build -o api-server taskAPI/cmd/api-server/api-server.go
+#
+#EXPOSE 8080
+#CMD ["./api-server"]

@@ -3,3 +3,4 @@
 *.py
 .idea/
 csvutil/
+*.sh
