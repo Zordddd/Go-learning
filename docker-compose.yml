@@ -8,8 +8,7 @@ services:
       POSTGRES_DB: database
       POSTGRES_USER: app_database
       POSTGRES_PASSWORD: app_database
-    ports:
-      - 5432:5432
+
     volumes:
       - backend_vol:/var/lib/postgresql/data
       - ./taskAPI/sql/init.sql:/docker-entrypoint-initdb.d/init.sql
@@ -38,6 +37,8 @@ services:
       DB_PASSWORD: app_database
     ports:
       - 8080:8080
+    volumes:
+      - ./taskAPI:/app/taskAPI
 
 volumes:
   backend_vol:
