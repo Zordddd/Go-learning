@@ -1,30 +1,45 @@
-version: '1'
+version: '3.8'
 
 services:
   db:
-    image: postgres
+    image: postgres:15-alpine
     container_name: db
     environment:
       POSTGRES_DB: database
       POSTGRES_USER: app_database
       POSTGRES_PASSWORD: app_database
+    ports:
+      - 5432:5432
     volumes:
-      - db_vol:/var/lib/postgresql/data/pgdata
+      - backend_vol:/var/lib/postgresql/data
     networks:
-      - db_net
+      - backend_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app_database -d database"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   backend:
-    image: api:1.0
+    build: .
     container_name: backend
     networks:
-      - db_net
+      - backend_net
+    depends_on:
+      db:
+        condition: service_healthy
     environment:
-      HOST: db
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: database
+      DB_USER: app_database
+      DB_PASSWORD: app_database
     ports:
       - 8080:8080
 
 volumes:
-  db_vol:
-
+  backend_vol:
+    name: "backend_vol"
 networks:
-  db_net:
+  backend_net:
+    name: "backend_net"
