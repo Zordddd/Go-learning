@@ -1,6 +1,9 @@
 package config
 
-import "os"
+import (
+	"fmt"
+	"os"
+)
 
 type Config struct {
 	DBHost     string
@@ -11,7 +14,7 @@ type Config struct {
 	AppPort    string
 }
 
-func loadConfig() *Config {
+func LoadConfig() *Config {
 	return &Config{
 		DBHost:     getEnv("DB_HOST", "localhost"),
 		DBPort:     getEnv("DB_PORT", "5432"),
@@ -27,4 +30,13 @@ func getEnv(key, defaultValue string) string {
 		return value
 	}
 	return defaultValue
+}
+
+func GetConnectionString(config *Config) string {
+	return fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",
+		config.DBUsername,
+		config.DBPassword,
+		config.DBHost,
+		config.DBPort,
+		config.DBName)
 }

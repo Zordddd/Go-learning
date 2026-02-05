@@ -1,13 +1,27 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"strconv"
-	"time"
 
-	"github.com/Zordddd/learning/taskAPI/internal/storage"
+	"github.com/Zordddd/learning/taskAPI/internal/models"
+	"github.com/Zordddd/learning/taskAPI/internal/postgres"
 )
+
+type TaskRepositoryHandler struct {
+	Repo *postgres.TaskRepository
+}
+
+func NewTaskRepositoryHandler(repo *postgres.TaskRepository) *TaskRepositoryHandler {
+	return &TaskRepositoryHandler{Repo: repo}
+}
+
+func (t *TaskRepositoryHandler) PingContext(ctx context.Context) error {
+	err := t.Repo.DB.PingContext(ctx)
+	return err
+}
 
 // TaskHandler godoc
 // @Summary Main task handler
@@ -27,17 +41,17 @@ import (
 // @Router /tasks [put]
 // @Router /tasks [delete]
 // @Security ApiKeyAuth
-func TaskHandler(w http.ResponseWriter, r *http.Request) {
+func (t *TaskRepositoryHandler) TaskHandler(w http.ResponseWriter, r *http.Request) {
 	Method := r.Method
 	switch Method {
 	case http.MethodGet:
-		GetTasksHandler(w, r)
+		t.GetTasksHandler(w, r)
 	case http.MethodPost:
-		CreateTaskHandler(w, r)
+		t.CreateTaskHandler(w, r)
 	case http.MethodPut:
-		UpdateTaskHandler(w, r)
+		t.UpdateTaskHandler(w, r)
 	case http.MethodDelete:
-		DeleteTaskHandler(w, r)
+		t.DeleteTaskHandler(w, r)
 	default:
 		w.Header().Set("Allow", "GET, POST, PUT, DELETE")
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -54,17 +68,14 @@ func TaskHandler(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} map[string]string
 // @Router /tasks [get]
 // @Security ApiKeyAuth
-func GetTasksHandler(w http.ResponseWriter, r *http.Request) {
-	result := make([]storage.Task, 0, len(storage.Database.Tasks))
-	storage.Database.Mu.RLock()
-	for _, task := range storage.Database.Tasks {
-		result = append(result, *task)
+func (t *TaskRepositoryHandler) GetTasksHandler(w http.ResponseWriter, r *http.Request) {
+	tasks, err := t.Repo.GetTasks(r.Context())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
-	storage.Database.Mu.RUnlock()
-
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	if err := json.NewEncoder(w).Encode(result); err != nil {
+	if err := json.NewEncoder(w).Encode(tasks); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
@@ -81,18 +92,16 @@ func GetTasksHandler(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} map[string]string
 // @Router /tasks [post]
 // @Security ApiKeyAuth
-func CreateTaskHandler(w http.ResponseWriter, r *http.Request) {
-	var task storage.Task
+func (t *TaskRepositoryHandler) CreateTaskHandler(w http.ResponseWriter, r *http.Request) {
+	var task models.TaskCreated
 	if err := json.NewDecoder(r.Body).Decode(&task); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	storage.Database.Mu.Lock()
-	task.ID = storage.Database.NextID
-	task.Timestamp = time.Now()
-	storage.Database.Tasks[storage.Database.NextID] = &task
-	storage.Database.NextID++
-	storage.Database.Mu.Unlock()
+	err := t.Repo.CreateTask(r.Context(), task)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
@@ -114,19 +123,17 @@ func CreateTaskHandler(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} map[string]string
 // @Router /tasks [put]
 // @Security ApiKeyAuth
-func UpdateTaskHandler(w http.ResponseWriter, r *http.Request) {
-	var currentTask storage.Task
+func (t *TaskRepositoryHandler) UpdateTaskHandler(w http.ResponseWriter, r *http.Request) {
+	var currentTask models.TaskUpdated
 	if err := json.NewDecoder(r.Body).Decode(&currentTask); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	if _, exists := storage.Database.Tasks[currentTask.ID]; !exists {
-		http.Error(w, "Task not found", http.StatusNotFound)
-		return
+
+	err := t.Repo.UpdateTask(r.Context(), currentTask)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
-	storage.Database.Mu.Lock()
-	storage.Database.Tasks[currentTask.ID] = &currentTask
-	storage.Database.Mu.Unlock()
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
@@ -151,7 +158,7 @@ func UpdateTaskHandler(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} map[string]string
 // @Router /tasks [delete]
 // @Security ApiKeyAuth
-func DeleteTaskHandler(w http.ResponseWriter, r *http.Request) {
+func (t *TaskRepositoryHandler) DeleteTaskHandler(w http.ResponseWriter, r *http.Request) {
 	data := r.URL.Query().Get("id")
 	if data == "" {
 		http.Error(w, "id is required", http.StatusBadRequest)
@@ -162,13 +169,11 @@ func DeleteTaskHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	if _, exists := storage.Database.Tasks[id]; !exists {
-		http.Error(w, "Task not found", http.StatusNotFound)
-		return
+
+	err = t.Repo.DeleteTask(r.Context(), id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
-	storage.Database.Mu.Lock()
-	delete(storage.Database.Tasks, id)
-	storage.Database.Mu.Unlock()
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)

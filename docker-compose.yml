@@ -12,6 +12,8 @@ services:
       - 5432:5432
     volumes:
       - backend_vol:/var/lib/postgresql/data
+      - ./taskAPI/sql/init.sql:/docker-entrypoint-initdb.d/init.sql
+
     networks:
       - backend_net
     healthcheck:
