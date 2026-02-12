@@ -18,7 +18,7 @@ RETURNING id, title, text, completed, created_at, updated_at
 
 type CreateTaskParams struct {
 	Title     string
-	Text      sql.NullString
+	Text      string
 	Completed sql.NullBool
 	CreatedAt sql.NullTime
 	UpdatedAt sql.NullTime
@@ -94,7 +94,7 @@ UPDATE tasks SET title=$2, text=$3, completed=$4, updated_at=$5 WHERE id=$1 RETU
 type UpdateTaskParams struct {
 	ID        int32
 	Title     string
-	Text      sql.NullString
+	Text      string
 	Completed sql.NullBool
 	UpdatedAt sql.NullTime
 }

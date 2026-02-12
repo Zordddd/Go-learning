@@ -1,8 +1,11 @@
 package config
 
 import (
+	"database/sql"
 	"fmt"
 	"os"
+
+	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 type Config struct {
@@ -39,4 +42,8 @@ func GetConnectionString(config *Config) string {
 		config.DBHost,
 		config.DBPort,
 		config.DBName)
+}
+
+func ConnectDB(config *Config) (*sql.DB, error) {
+	return sql.Open("pgx", GetConnectionString(config))
 }

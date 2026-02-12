@@ -11,7 +11,7 @@ import (
 type Task struct {
 	ID        int32
 	Title     string
-	Text      sql.NullString
+	Text      string
 	Completed sql.NullBool
 	CreatedAt sql.NullTime
 	UpdatedAt sql.NullTime

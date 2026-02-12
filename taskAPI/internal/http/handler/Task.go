@@ -1,26 +1,19 @@
 package handler
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 	"strconv"
 
-	"github.com/Zordddd/learning/taskAPI/internal/models"
-	"github.com/Zordddd/learning/taskAPI/internal/postgres"
+	"github.com/Zordddd/learning/taskAPI/internal/store"
 )
 
 type TaskRepositoryHandler struct {
-	Repo *postgres.TaskRepository
+	Repo *store.Queries
 }
 
-func NewTaskRepositoryHandler(repo *postgres.TaskRepository) *TaskRepositoryHandler {
+func NewTaskRepositoryHandler(repo *store.Queries) *TaskRepositoryHandler {
 	return &TaskRepositoryHandler{Repo: repo}
-}
-
-func (t *TaskRepositoryHandler) PingContext(ctx context.Context) error {
-	err := t.Repo.DB.PingContext(ctx)
-	return err
 }
 
 // TaskHandler godoc
@@ -93,12 +86,12 @@ func (t *TaskRepositoryHandler) GetTasksHandler(w http.ResponseWriter, r *http.R
 // @Router /tasks [post]
 // @Security ApiKeyAuth
 func (t *TaskRepositoryHandler) CreateTaskHandler(w http.ResponseWriter, r *http.Request) {
-	var task models.TaskCreated
-	if err := json.NewDecoder(r.Body).Decode(&task); err != nil {
+	var createTask store.CreateTaskParams
+	if err := json.NewDecoder(r.Body).Decode(&createTask); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	err := t.Repo.CreateTask(r.Context(), task)
+	task, err := t.Repo.CreateTask(r.Context(), createTask)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
@@ -124,13 +117,13 @@ func (t *TaskRepositoryHandler) CreateTaskHandler(w http.ResponseWriter, r *http
 // @Router /tasks [put]
 // @Security ApiKeyAuth
 func (t *TaskRepositoryHandler) UpdateTaskHandler(w http.ResponseWriter, r *http.Request) {
-	var currentTask models.TaskUpdated
-	if err := json.NewDecoder(r.Body).Decode(&currentTask); err != nil {
+	var updateTask store.UpdateTaskParams
+	if err := json.NewDecoder(r.Body).Decode(&updateTask); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	err := t.Repo.UpdateTask(r.Context(), currentTask)
+	task, err := t.Repo.UpdateTask(r.Context(), updateTask)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
@@ -139,6 +132,7 @@ func (t *TaskRepositoryHandler) UpdateTaskHandler(w http.ResponseWriter, r *http
 	w.WriteHeader(http.StatusOK)
 	response := map[string]interface{}{
 		"status": "success",
+		"data":   task,
 	}
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -170,7 +164,7 @@ func (t *TaskRepositoryHandler) DeleteTaskHandler(w http.ResponseWriter, r *http
 		return
 	}
 
-	err = t.Repo.DeleteTask(r.Context(), id)
+	err = t.Repo.DeleteTask(r.Context(), int32(id))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}

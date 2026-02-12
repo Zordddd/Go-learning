@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"log/slog"
 	"net/http"
@@ -13,7 +14,7 @@ import (
 	"github.com/Zordddd/learning/taskAPI/internal/config"
 	"github.com/Zordddd/learning/taskAPI/internal/http/handler"
 	"github.com/Zordddd/learning/taskAPI/internal/http/middleware"
-	"github.com/Zordddd/learning/taskAPI/internal/postgres"
+	"github.com/Zordddd/learning/taskAPI/internal/store"
 	"github.com/Zordddd/learning/taskAPI/pkg/logger"
 
 	_ "github.com/Zordddd/learning/taskAPI/docs"
@@ -25,12 +26,13 @@ type Application struct {
 	logger      *slog.Logger
 	config      middleware.CORSOptions
 	repoHandler *handler.TaskRepositoryHandler
+	db          *sql.DB
 }
 
 func NewApplication() *Application {
 	newLogger := logger.SetupLogger()
 
-	repoHandler := InitDB()
+	repoHandler, database := InitDB()
 
 	app := &Application{
 		server: &http.Server{
@@ -48,6 +50,7 @@ func NewApplication() *Application {
 			MaxAge:      300,
 		},
 		repoHandler: repoHandler,
+		db:          database,
 	}
 
 	app.server.Handler = app.SetupRoutes()
@@ -55,13 +58,21 @@ func NewApplication() *Application {
 	return app
 }
 
-func InitDB() *handler.TaskRepositoryHandler {
-	db, err := postgres.ConnectDB(config.GetConnectionString(config.LoadConfig()))
+func InitDB() (*handler.TaskRepositoryHandler, *sql.DB) {
+	db, err := config.ConnectDB(config.LoadConfig())
 	if err != nil {
 		panic(err)
 	}
-	taskHandler := handler.NewTaskRepositoryHandler(postgres.NewTaskRepository(db))
-	return taskHandler
+	taskHandler := handler.NewTaskRepositoryHandler(store.New(db))
+	return taskHandler, db
+}
+
+func (app *Application) PingContext(ctx context.Context) error {
+	err := app.db.PingContext(ctx)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (app *Application) SetupRoutes() http.Handler {
@@ -97,12 +108,12 @@ func (app *Application) SetupRoutes() http.Handler {
 
 func (app *Application) Run() error {
 	defer func() {
-		if app.repoHandler.Repo.DB != nil {
-			app.repoHandler.Repo.DB.Close()
+		if app.db != nil {
+			app.db.Close()
 			app.logger.Info("Database connection closed")
 		}
 	}()
-	
+
 	errServer := make(chan error, 1)
 	go func() {
 		if err := app.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -171,10 +182,10 @@ func (app *Application) healthHandler(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} map[string]interface{}
 // @Router /readiness [get]
 func (app *Application) readinessHandler(w http.ResponseWriter, r *http.Request) {
-	if app.repoHandler.Repo.DB != nil {
+	if app.db != nil {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 		defer cancel()
-		err := app.repoHandler.PingContext(ctx)
+		err := app.PingContext(ctx)
 		if err != nil {
 			slog.Warn("Failed to ping database", "error", err)
 			w.Header().Set("Content-Type", "application/json")
