@@ -1,0 +1,10 @@
+version: '2'
+
+sql:
+  - schema: "./taskAPI/db/schema.sql"
+    queries: "./taskAPI/db/queries"
+    engine: "postgresql"
+    gen:
+      go:
+        out: "./taskAPI/internal/store"
+        package: "store"

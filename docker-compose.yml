@@ -11,7 +11,7 @@ services:
 
     volumes:
       - backend_vol:/var/lib/postgresql/data
-      - ./taskAPI/sql/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./taskAPI/db/schema.sql:/docker-entrypoint-initdb.d/schema.sql
 
     networks:
       - backend_net
