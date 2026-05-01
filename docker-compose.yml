@@ -40,6 +40,18 @@ services:
     volumes:
       - ./taskAPI:/app/taskAPI
 
+  frontend:
+    build:
+      context: ./taskAPI/frontend
+      dockerfile: Dockerfile
+    container_name: taskapi-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - backend_net
+
 volumes:
   backend_vol:
     name: "backend_vol"

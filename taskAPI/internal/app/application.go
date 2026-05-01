@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"log/slog"
 	"net/http"
@@ -10,6 +9,8 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/Zordddd/learning/taskAPI/internal/config"
 	"github.com/Zordddd/learning/taskAPI/internal/http/handler"
@@ -26,7 +27,7 @@ type Application struct {
 	logger      *slog.Logger
 	config      middleware.CORSOptions
 	repoHandler *handler.TaskRepositoryHandler
-	db          *sql.DB
+	db          *pgxpool.Pool
 }
 
 func NewApplication() *Application {
@@ -44,7 +45,7 @@ func NewApplication() *Application {
 		logger: newLogger,
 		config: middleware.CORSOptions{
 			Origins:     []string{"*"},
-			Methods:     []string{"GET", "POST", "OPTIONS"},
+			Methods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 			Headers:     []string{"Content-Type", "X-API-Key", "Authorization"},
 			Credentials: true,
 			MaxAge:      300,
@@ -58,17 +59,18 @@ func NewApplication() *Application {
 	return app
 }
 
-func InitDB() (*handler.TaskRepositoryHandler, *sql.DB) {
-	db, err := config.ConnectDB(config.LoadConfig())
+func InitDB() (*handler.TaskRepositoryHandler, *pgxpool.Pool) {
+	ctx := context.Background()
+	pool, err := pgxpool.New(ctx, config.GetConnectionString(config.LoadConfig()))
 	if err != nil {
 		panic(err)
 	}
-	taskHandler := handler.NewTaskRepositoryHandler(store.New(db))
-	return taskHandler, db
+	taskHandler := handler.NewTaskRepositoryHandler(store.New(pool))
+	return taskHandler, pool
 }
 
 func (app *Application) PingContext(ctx context.Context) error {
-	err := app.db.PingContext(ctx)
+	err := app.db.Ping(ctx)
 	if err != nil {
 		return err
 	}
@@ -91,7 +93,7 @@ func (app *Application) SetupRoutes() http.Handler {
 		CORSMiddleware,
 		timeoutMiddleware,
 		rateLimiterMiddleware,
-		middleware.AuthMiddleware,
+		//middleware.AuthMiddleware,
 		middleware.JsonContentTypeMiddleware,
 	)
 	mux.HandleFunc("/swagger/", httpSwagger.Handler(
@@ -101,7 +103,7 @@ func (app *Application) SetupRoutes() http.Handler {
 	mux.HandleFunc("/liveness", app.livenessHandler)
 	mux.HandleFunc("/readiness", app.readinessHandler)
 
-	mux.HandleFunc("/task", chain(app.repoHandler.TaskHandler))
+	mux.HandleFunc("/tasks", chain(app.repoHandler.TaskHandler))
 
 	return mux
 }

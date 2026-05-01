@@ -68,8 +68,9 @@ func (t *TaskRepositoryHandler) GetTasksHandler(w http.ResponseWriter, r *http.R
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	if err := json.NewEncoder(w).Encode(tasks); err != nil {
+	if err = json.NewEncoder(w).Encode(tasks); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 }
 
@@ -91,13 +92,20 @@ func (t *TaskRepositoryHandler) CreateTaskHandler(w http.ResponseWriter, r *http
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	if createTask.Title == "" || createTask.Text == "" {
+		http.Error(w, "title or text is empty", http.StatusBadRequest)
+		return
+	}
 	task, err := t.Repo.CreateTask(r.Context(), createTask)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
+
 	if err := json.NewEncoder(w).Encode(task); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
@@ -123,9 +131,15 @@ func (t *TaskRepositoryHandler) UpdateTaskHandler(w http.ResponseWriter, r *http
 		return
 	}
 
+	if updateTask.Title == "" || updateTask.Text == "" {
+		http.Error(w, "title or text is empty", http.StatusBadRequest)
+		return
+	}
+
 	task, err := t.Repo.UpdateTask(r.Context(), updateTask)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -136,6 +150,7 @@ func (t *TaskRepositoryHandler) UpdateTaskHandler(w http.ResponseWriter, r *http
 	}
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 }
 
@@ -167,6 +182,7 @@ func (t *TaskRepositoryHandler) DeleteTaskHandler(w http.ResponseWriter, r *http
 	err = t.Repo.DeleteTask(r.Context(), int32(id))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -176,5 +192,6 @@ func (t *TaskRepositoryHandler) DeleteTaskHandler(w http.ResponseWriter, r *http
 	}
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 }

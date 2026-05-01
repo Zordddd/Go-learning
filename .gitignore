@@ -4,3 +4,4 @@
 .idea/
 csvutil/
 *.sh
+./taskAPI/frontend/node_modules

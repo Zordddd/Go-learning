@@ -7,31 +7,23 @@ package store
 
 import (
 	"context"
-	"database/sql"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createTask = `-- name: CreateTask :one
-INSERT INTO tasks (title, text, completed, created_at, updated_at)
-VALUES ($1, $2, $3, $4, $5)
-RETURNING id, title, text, completed, created_at, updated_at
+INSERT INTO tasks (title, text, completed)
+VALUES ($1, $2, $3) RETURNING id, title, text, completed, created_at, updated_at
 `
 
 type CreateTaskParams struct {
-	Title     string
-	Text      string
-	Completed sql.NullBool
-	CreatedAt sql.NullTime
-	UpdatedAt sql.NullTime
+	Title     string      `json:"title"`
+	Text      string      `json:"text"`
+	Completed pgtype.Bool `json:"completed"`
 }
 
 func (q *Queries) CreateTask(ctx context.Context, arg CreateTaskParams) (Task, error) {
-	row := q.db.QueryRowContext(ctx, createTask,
-		arg.Title,
-		arg.Text,
-		arg.Completed,
-		arg.CreatedAt,
-		arg.UpdatedAt,
-	)
+	row := q.db.QueryRow(ctx, createTask, arg.Title, arg.Text, arg.Completed)
 	var i Task
 	err := row.Scan(
 		&i.ID,
@@ -45,20 +37,45 @@ func (q *Queries) CreateTask(ctx context.Context, arg CreateTaskParams) (Task, e
 }
 
 const deleteTask = `-- name: DeleteTask :exec
-DELETE FROM tasks WHERE id = $1
+DELETE
+FROM tasks
+WHERE id = $1
 `
 
 func (q *Queries) DeleteTask(ctx context.Context, id int32) error {
-	_, err := q.db.ExecContext(ctx, deleteTask, id)
+	_, err := q.db.Exec(ctx, deleteTask, id)
 	return err
 }
 
+const getTask = `-- name: GetTask :one
+SELECT id, title, text, completed, created_at, updated_at
+FROM tasks
+WHERE id = $1
+LIMIT 1
+`
+
+func (q *Queries) GetTask(ctx context.Context, id int32) (Task, error) {
+	row := q.db.QueryRow(ctx, getTask, id)
+	var i Task
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.Text,
+		&i.Completed,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getTasks = `-- name: GetTasks :many
-SELECT id, title, text, completed, created_at, updated_at FROM tasks
+SELECT id, title, text, completed, created_at, updated_at
+FROM tasks
+ORDER BY created_at DESC
 `
 
 func (q *Queries) GetTasks(ctx context.Context) ([]Task, error) {
-	rows, err := q.db.QueryContext(ctx, getTasks)
+	rows, err := q.db.Query(ctx, getTasks)
 	if err != nil {
 		return nil, err
 	}
@@ -78,9 +95,6 @@ func (q *Queries) GetTasks(ctx context.Context) ([]Task, error) {
 		}
 		items = append(items, i)
 	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
@@ -88,24 +102,27 @@ func (q *Queries) GetTasks(ctx context.Context) ([]Task, error) {
 }
 
 const updateTask = `-- name: UpdateTask :one
-UPDATE tasks SET title=$2, text=$3, completed=$4, updated_at=$5 WHERE id=$1 RETURNING id, title, text, completed, created_at, updated_at
+UPDATE tasks
+SET title      = COALESCE($2, title),
+    text       = COALESCE($3, text),
+    completed  = COALESCE($4, completed),
+    updated_at = NOW()
+WHERE id = $1 RETURNING id, title, text, completed, created_at, updated_at
 `
 
 type UpdateTaskParams struct {
-	ID        int32
-	Title     string
-	Text      string
-	Completed sql.NullBool
-	UpdatedAt sql.NullTime
+	ID        int32       `json:"id"`
+	Title     string      `json:"title"`
+	Text      string      `json:"text"`
+	Completed pgtype.Bool `json:"completed"`
 }
 
 func (q *Queries) UpdateTask(ctx context.Context, arg UpdateTaskParams) (Task, error) {
-	row := q.db.QueryRowContext(ctx, updateTask,
+	row := q.db.QueryRow(ctx, updateTask,
 		arg.ID,
 		arg.Title,
 		arg.Text,
 		arg.Completed,
-		arg.UpdatedAt,
 	)
 	var i Task
 	err := row.Scan(

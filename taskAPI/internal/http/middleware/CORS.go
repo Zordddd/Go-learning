@@ -35,18 +35,18 @@ func NewCORSMiddleware(config CORSOptions) func(http.HandlerFunc) http.HandlerFu
 			if config.Credentials {
 				w.Header().Set("Access-Control-Allow-Credentials", "true")
 			}
-
-			// Preflight
+			if len(config.Headers) > 0 {
+				w.Header().Set("Access-Control-Allow-Headers", strings.Join(config.Headers, ","))
+			}
+			if len(config.Methods) > 0 {
+				w.Header().Set("Access-Control-Allow-Methods", strings.Join(config.Methods, ","))
+			}
+			if config.MaxAge > 0 {
+				w.Header().Set("Access-Control-Max-Age", strconv.Itoa(config.MaxAge))
+			}
 			if r.Method == http.MethodOptions {
-				if len(config.Headers) > 0 {
-					w.Header().Set("Access-Control-Allow-Headers", strings.Join(config.Headers, ","))
-				}
-				if len(config.Methods) > 0 {
-					w.Header().Set("Access-Control-Allow-Methods", strings.Join(config.Methods, ","))
-				}
-				if config.MaxAge > 0 {
-					w.Header().Set("Access-Control-Max-Age", strconv.Itoa(config.MaxAge))
-				}
+				w.WriteHeader(http.StatusOK)
+				return
 			}
 
 			next(w, r)

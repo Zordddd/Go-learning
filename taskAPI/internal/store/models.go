@@ -4,15 +4,13 @@
 
 package store
 
-import (
-	"database/sql"
-)
+import "github.com/jackc/pgx/v5/pgtype"
 
 type Task struct {
-	ID        int32
-	Title     string
-	Text      string
-	Completed sql.NullBool
-	CreatedAt sql.NullTime
-	UpdatedAt sql.NullTime
+	ID        int32              `json:"id"`
+	Title     string             `json:"title"`
+	Text      string             `json:"text"`
+	Completed pgtype.Bool        `json:"completed"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }

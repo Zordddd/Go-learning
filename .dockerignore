@@ -1,2 +1,13 @@
+.git
 .gitignore
+README.md
+.dockerignore
+Dockerfile
+docker-compose.yml
 *.test
+*.out
+coverage.html
+coverage.out
+.env
+frontend/
+node_modules/
